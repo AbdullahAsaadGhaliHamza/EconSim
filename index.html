@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EconSim — Game Economy Inflation Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="engine.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0b0c0f;
+    --surface: #111318;
+    --surface2: #181b22;
+    --border: #1f2330;
+    --accent: #e8ff47;
+    --accent2: #ff4d6d;
+    --accent3: #4dffb4;
+    --text: #e8eaf0;
+    --muted: #555c72;
+    --warn: #ff9500;
+    --critical: #ff3b3b;
+    --low: #4dffb4;
+    --moderate: #ffcc00;
+    --high: #ff9500;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 80% 10%, rgba(232,255,71,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 10% 80%, rgba(77,255,180,0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .scanlines {
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  #app {
+    position: relative;
+    z-index: 2;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 20px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-block h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .logo-block h1 span {
+    color: var(--text);
+  }
+
+  .logo-block p {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(232,255,71,0.05);
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #0b0c0f;
+    font-weight: 700;
+  }
+
+  .btn.primary:hover {
+    background: #d4eb00;
+    border-color: #d4eb00;
+    color: #0b0c0f;
+  }
+
+  .btn.danger {
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  .btn.danger:hover {
+    background: rgba(255,77,109,0.08);
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .config-section {
+    margin-bottom: 18px;
+  }
+
+  .config-section-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  .field {
+    margin-bottom: 10px;
+  }
+
+  .field label {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .field input[type="number"],
+  .field input[type="range"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 6px 8px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field input[type="number"]:focus {
+    border-color: var(--accent);
+  }
+
+  .field input[type="range"] {
+    padding: 4px 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+
+  .field .range-val {
+    text-align: right;
+    color: var(--accent);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  .toggle-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+
+  .toggle-row span {
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .toggle-row .source-rate {
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 32px;
+    height: 17px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .toggle-slider:before {
+    content: '';
+    position: absolute;
+    height: 11px;
+    width: 11px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--muted);
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider {
+    background: rgba(232,255,71,0.2);
+    border: 1px solid var(--accent);
+  }
+
+  .toggle input:checked + .toggle-slider:before {
+    transform: translateX(15px);
+    background: var(--accent);
+  }
+
+  .main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s ease;
+  }
+
+  .stat-card.loaded::before { transform: scaleX(1); }
+
+  .stat-card.risk-card::before { background: var(--risk-color, var(--accent)); }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.accent { color: var(--accent); }
+  .stat-value.danger { color: var(--accent2); }
+
+  .stat-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .risk-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .risk-STABLE   { background: rgba(77,255,180,0.15); color: var(--low); border: 1px solid var(--low); }
+  .risk-LOW      { background: rgba(77,255,180,0.1); color: var(--low); border: 1px solid rgba(77,255,180,0.4); }
+  .risk-MODERATE { background: rgba(255,204,0,0.12); color: var(--moderate); border: 1px solid rgba(255,204,0,0.4); }
+  .risk-HIGH     { background: rgba(255,149,0,0.12); color: var(--high); border: 1px solid rgba(255,149,0,0.4); }
+  .risk-CRITICAL { background: rgba(255,59,59,0.15); color: var(--critical); border: 1px solid rgba(255,59,59,0.5); animation: pulse-critical 1.2s ease-in-out infinite; }
+
+  @keyframes pulse-critical {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,59,59,0.4); }
+    50% { box-shadow: 0 0 12px 2px rgba(255,59,59,0.2); }
+  }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 18px;
+  }
+
+  .chart-panel.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .chart-title .chart-tag {
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+  }
+
+  .chart-wrap.tall { height: 260px; }
+
+  .alerts-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 18px;
+  }
+
+  .alerts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .alerts-list::-webkit-scrollbar { width: 4px; }
+  .alerts-list::-webkit-scrollbar-track { background: var(--bg); }
+  .alerts-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-left: 3px solid transparent;
+    font-size: 11px;
+  }
+
+  .alert-item.CRITICAL { border-left-color: var(--critical); }
+  .alert-item.HIGH     { border-left-color: var(--high); }
+  .alert-item.MODERATE { border-left-color: var(--moderate); }
+
+  .alert-day {
+    color: var(--muted);
+    font-size: 10px;
+    white-space: nowrap;
+    min-width: 40px;
+  }
+
+  .alert-msg { color: var(--text); line-height: 1.4; }
+
+  .timeline-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 18px;
+  }
+
+  .timeline-wrap {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .timeline-wrap::-webkit-scrollbar { height: 4px; }
+  .timeline-wrap::-webkit-scrollbar-track { background: var(--bg); }
+  .timeline-wrap::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .risk-timeline {
+    display: flex;
+    gap: 2px;
+    height: 28px;
+    min-width: 600px;
+  }
+
+  .risk-tick {
+    flex: 1;
+    min-width: 3px;
+    cursor: pointer;
+    transition: opacity 0.1s;
+    position: relative;
+  }
+
+  .risk-tick:hover { opacity: 0.7; }
+  .risk-tick[data-level="STABLE"]   { background: rgba(77,255,180,0.4); }
+  .risk-tick[data-level="LOW"]      { background: rgba(77,255,180,0.6); }
+  .risk-tick[data-level="MODERATE"] { background: rgba(255,204,0,0.7); }
+  .risk-tick[data-level="HIGH"]     { background: rgba(255,149,0,0.85); }
+  .risk-tick[data-level="CRITICAL"] { background: rgba(255,59,59,0.95); }
+
+  .timeline-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 10px;
+  }
+
+  .tooltip {
+    position: fixed;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text);
+    pointer-events: none;
+    z-index: 999;
+    display: none;
+    max-width: 200px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+
+  .tooltip .tip-day { color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .tooltip .tip-row { display: flex; justify-content: space-between; gap: 16px; }
+  .tooltip .tip-val { color: var(--accent3); }
+
+  #empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+
+  #empty-state .big-text {
+    font-family: 'Syne', sans-serif;
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  #empty-state p {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .export-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  #sim-results { display: none; }
+
+  .loading-bar {
+    height: 2px;
+    background: var(--border);
+    margin-top: 10px;
+    overflow: hidden;
+    display: none;
+  }
+
+  .loading-bar.active { display: block; }
+
+  .loading-bar-inner {
+    height: 100%;
+    background: var(--accent);
+    animation: loading 0.6s ease-out forwards;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  @keyframes loading {
+    to { transform: scaleX(1); }
+  }
+
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    header { flex-direction: column; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div id="app">
+
+  <header>
+    <div class="logo-block">
+      <h1>Econ<span>Sim</span></h1>
+      <p>MMO Economy Inflation Simulator &mdash; v1.0</p>
+    </div>
+    <div class="header-actions">
+      <div id="export-row" class="export-row" style="display:none;">
+        <button class="btn" onclick="doExportCsv()">Export CSV</button>
+        <button class="btn" onclick="doExportJson()">Export JSON</button>
+      </div>
+      <button class="btn primary" onclick="runSim()">Run Simulation</button>
+    </div>
+  </header>
+
+  <div class="loading-bar" id="loading-bar">
+    <div class="loading-bar-inner"></div>
+  </div>
+
+  <div class="layout">
+    <aside>
+      <div class="panel">
+        <div class="panel-title">Simulation Config</div>
+
+        <div class="config-section">
+          <div class="config-section-label">World Settings</div>
+
+          <div class="field">
+            <label>Starting Player Count</label>
+            <input type="number" id="cfg-players" value="1000" min="100" max="1000000" step="100">
+          </div>
+
+          <div class="field">
+            <label>Simulation Days</label>
+            <input type="number" id="cfg-days" value="180" min="30" max="730" step="10">
+          </div>
+
+          <div class="field">
+            <label>Player Growth Rate <span class="range-val" id="val-growth">2.0%</span></label>
+            <input type="range" id="cfg-growth" min="0" max="15" step="0.5" value="2.0"
+              oninput="document.getElementById('val-growth').textContent = this.value + '%'">
+          </div>
+
+          <div class="field">
+            <label>Player Churn Rate <span class="range-val" id="val-churn">1.0%</span></label>
+            <input type="range" id="cfg-churn" min="0" max="15" step="0.5" value="1.0"
+              oninput="document.getElementById('val-churn').textContent = this.value + '%'">
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-label">Economy Params</div>
+
+          <div class="field">
+            <label>Money Velocity <span class="range-val" id="val-velocity">1.8</span></label>
+            <input type="range" id="cfg-velocity" min="0.5" max="5" step="0.1" value="1.8"
+              oninput="document.getElementById('val-velocity').textContent = parseFloat(this.value).toFixed(1)">
+          </div>
+
+          <div class="field">
+            <label>Price Elasticity <span class="range-val" id="val-elastic">0.65</span></label>
+            <input type="range" id="cfg-elastic" min="0.1" max="2" step="0.05" value="0.65"
+              oninput="document.getElementById('val-elastic').textContent = parseFloat(this.value).toFixed(2)">
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-label">Gold Sources (Inflows)</div>
+          <div class="toggle-group" id="sources-group">
+            <div class="toggle-row">
+              <div><span>Quest Rewards</span><span class="source-rate">50g base</span></div>
+              <label class="toggle"><input type="checkbox" id="src-quest" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Mob Drops</span><span class="source-rate">30g base</span></div>
+              <label class="toggle"><input type="checkbox" id="src-mobs" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Vendor Sales</span><span class="source-rate">15g base</span></div>
+              <label class="toggle"><input type="checkbox" id="src-vendor" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Dungeon Bosses</span><span class="source-rate">200g base</span></div>
+              <label class="toggle"><input type="checkbox" id="src-dungeon" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Daily Login</span><span class="source-rate">10g base</span></div>
+              <label class="toggle"><input type="checkbox" id="src-login"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-section">
+          <div class="config-section-label">Gold Sinks (Outflows)</div>
+          <div class="toggle-group" id="sinks-group">
+            <div class="toggle-row">
+              <div><span>Repair Costs</span><span class="source-rate">20g base</span></div>
+              <label class="toggle"><input type="checkbox" id="sink-repair" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Auction Fees</span><span class="source-rate">25g base</span></div>
+              <label class="toggle"><input type="checkbox" id="sink-ah" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Mount Training</span><span class="source-rate">5g base</span></div>
+              <label class="toggle"><input type="checkbox" id="sink-mount" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Skill Respec</span><span class="source-rate">8g base</span></div>
+              <label class="toggle"><input type="checkbox" id="sink-respec" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="toggle-row">
+              <div><span>Guild Hall</span><span class="source-rate">12g base</span></div>
+              <label class="toggle"><input type="checkbox" id="sink-guild"><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <div class="main-content">
+
+      <div id="empty-state">
+        <div class="big-text">180</div>
+        <p>Configure your economy on the left<br>then hit <strong>Run Simulation</strong> to model inflation risk over time.</p>
+      </div>
+
+      <div id="sim-results">
+
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card" id="sc-cpi">
+            <div class="stat-label">Final CPI</div>
+            <div class="stat-value accent" id="v-cpi">--</div>
+            <div class="stat-sub" id="v-cpi-change">-- vs baseline</div>
+          </div>
+          <div class="stat-card" id="sc-inflation">
+            <div class="stat-label">Avg Daily Inflation</div>
+            <div class="stat-value" id="v-inflation">--</div>
+            <div class="stat-sub" id="v-peak-inflation">peak: --</div>
+          </div>
+          <div class="stat-card" id="sc-supply">
+            <div class="stat-label">Final Money Supply</div>
+            <div class="stat-value" id="v-supply">--</div>
+            <div class="stat-sub" id="v-players">-- active players</div>
+          </div>
+          <div class="stat-card" id="sc-risk">
+            <div class="stat-label">Final Risk Level</div>
+            <div class="stat-value" id="v-risk">--</div>
+            <div class="stat-sub" id="v-risk-days">-- days at high risk</div>
+          </div>
+          <div class="stat-card" id="sc-ratio">
+            <div class="stat-label">Peak Risk Score</div>
+            <div class="stat-value" id="v-peak-risk">--</div>
+            <div class="stat-sub" id="v-peak-risk-day">day --</div>
+          </div>
+        </div>
+
+        <div class="timeline-panel">
+          <div class="chart-title">
+            Inflation Risk Timeline
+            <span class="chart-tag">hover for details</span>
+          </div>
+          <div class="timeline-wrap">
+            <div class="risk-timeline" id="risk-timeline"></div>
+            <div class="timeline-labels">
+              <span>Day 0</span>
+              <span id="timeline-mid"></span>
+              <span id="timeline-end"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-panel">
+            <div class="chart-title">CPI Over Time <span class="chart-tag">baseline = 100</span></div>
+            <div class="chart-wrap"><canvas id="chart-cpi"></canvas></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-title">Money Supply <span class="chart-tag">total gold in economy</span></div>
+            <div class="chart-wrap"><canvas id="chart-supply"></canvas></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-title">Daily Inflow vs Outflow <span class="chart-tag">gold per day</span></div>
+            <div class="chart-wrap"><canvas id="chart-flows"></canvas></div>
+          </div>
+          <div class="chart-panel">
+            <div class="chart-title">Player Count <span class="chart-tag">active players</span></div>
+            <div class="chart-wrap"><canvas id="chart-players"></canvas></div>
+          </div>
+          <div class="chart-panel full-width">
+            <div class="chart-title">Hyperinflation Risk Score <span class="chart-tag">0 = stable / 100 = hyperinflation</span></div>
+            <div class="chart-wrap tall"><canvas id="chart-risk"></canvas></div>
+          </div>
+        </div>
+
+        <div class="alerts-panel">
+          <div class="chart-title">Event Log <span class="chart-tag">notable days flagged during simulation</span></div>
+          <div class="alerts-list" id="alerts-list"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip">
+  <div class="tip-day" id="tip-day"></div>
+  <div class="tip-row"><span>Risk</span><span class="tip-val" id="tip-risk"></span></div>
+  <div class="tip-row"><span>CPI</span><span class="tip-val" id="tip-cpi"></span></div>
+  <div class="tip-row"><span>Inflation</span><span class="tip-val" id="tip-inflation"></span></div>
+  <div class="tip-row"><span>Players</span><span class="tip-val" id="tip-players"></span></div>
+</div>
+
+<script>
+  let simResult = null;
+  let charts = {};
+
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 600, easing: 'easeOutQuart' },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#181b22',
+        borderColor: '#1f2330',
+        borderWidth: 1,
+        titleColor: '#e8ff47',
+        bodyColor: '#e8eaf0',
+        titleFont: { family: 'Space Mono', size: 11 },
+        bodyFont: { family: 'Space Mono', size: 11 },
+        padding: 10,
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#555c72', font: { family: 'Space Mono', size: 10 }, maxTicksLimit: 10 },
+        grid: { color: 'rgba(31,35,48,0.8)' },
+      },
+      y: {
+        ticks: { color: '#555c72', font: { family: 'Space Mono', size: 10 } },
+        grid: { color: 'rgba(31,35,48,0.8)' },
+      }
+    }
+  };
+
+  function buildConfig() {
+    const cfg = EconomyEngine.createDefaultConfig();
+    cfg.startingPlayerCount = parseInt(document.getElementById('cfg-players').value) || 1000;
+    cfg.simulationDays = parseInt(document.getElementById('cfg-days').value) || 180;
+    cfg.playerGrowthRate = parseFloat(document.getElementById('cfg-growth').value) / 100;
+    cfg.playerChurnRate = parseFloat(document.getElementById('cfg-churn').value) / 100;
+    cfg.velocityFactor = parseFloat(document.getElementById('cfg-velocity').value);
+    cfg.elasticity = parseFloat(document.getElementById('cfg-elastic').value);
+
+    cfg.goldSources.questRewards.enabled = document.getElementById('src-quest').checked;
+    cfg.goldSources.mobDrops.enabled = document.getElementById('src-mobs').checked;
+    cfg.goldSources.vendorSales.enabled = document.getElementById('src-vendor').checked;
+    cfg.goldSources.dungeonBoss.enabled = document.getElementById('src-dungeon').checked;
+    cfg.goldSources.dailyLogin.enabled = document.getElementById('src-login').checked;
+
+    cfg.goldSinks.repairCosts.enabled = document.getElementById('sink-repair').checked;
+    cfg.goldSinks.auctionFees.enabled = document.getElementById('sink-ah').checked;
+    cfg.goldSinks.mountTraining.enabled = document.getElementById('sink-mount').checked;
+    cfg.goldSinks.skillRespec.enabled = document.getElementById('sink-respec').checked;
+    cfg.goldSinks.guildHall.enabled = document.getElementById('sink-guild').checked;
+
+    return cfg;
+  }
+
+  function runSim() {
+    const lb = document.getElementById('loading-bar');
+    lb.classList.add('active');
+    lb.querySelector('.loading-bar-inner').style.animation = 'none';
+    lb.querySelector('.loading-bar-inner').offsetHeight;
+    lb.querySelector('.loading-bar-inner').style.animation = '';
+
+    setTimeout(() => {
+      const cfg = buildConfig();
+      simResult = EconomyEngine.runSimulation(cfg);
+      renderResults(simResult);
+      lb.classList.remove('active');
+    }, 50);
+  }
+
+  function renderResults(result) {
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('sim-results').style.display = 'flex';
+    document.getElementById('sim-results').style.flexDirection = 'column';
+    document.getElementById('sim-results').style.gap = '18px';
+    document.getElementById('export-row').style.display = 'flex';
+
+    const s = result.summary;
+    const h = result.history;
+    const days = h.map(x => 'D' + x.day);
+
+    document.getElementById('v-cpi').textContent = s.finalCpi.toFixed(1);
+    document.getElementById('v-cpi-change').textContent = (s.cpiChange >= 0 ? '+' : '') + s.cpiChange + '% vs baseline';
+
+    const avgInf = s.avgInflationRate;
+    const infEl = document.getElementById('v-inflation');
+    infEl.textContent = (avgInf >= 0 ? '+' : '') + avgInf.toFixed(2) + '%';
+    infEl.className = 'stat-value ' + (avgInf > 3 ? 'danger' : avgInf > 1 ? '' : 'accent');
+    document.getElementById('v-peak-inflation').textContent = 'peak: +' + s.peakInflationRate.toFixed(2) + '% (day ' + s.peakInflationDay + ')';
+
+    document.getElementById('v-supply').textContent = fmtGold(s.finalMoneySupply);
+    document.getElementById('v-players').textContent = s.finalPlayerCount.toLocaleString() + ' active players';
+
+    const riskEl = document.getElementById('v-risk');
+    riskEl.innerHTML = '<span class="risk-badge risk-' + s.finalRiskLevel + '">' + s.finalRiskLevel + '</span>';
+    document.getElementById('v-risk-days').textContent = s.daysAtHighRisk + ' days at high/critical risk';
+
+    document.getElementById('v-peak-risk').textContent = s.peakRiskScore.toFixed(0) + '/100';
+    document.getElementById('v-peak-risk-day').textContent = 'day ' + s.peakRiskDay;
+
+    document.querySelectorAll('.stat-card').forEach(c => {
+      c.classList.remove('loaded');
+      setTimeout(() => c.classList.add('loaded'), 10);
+    });
+
+    renderTimeline(h);
+    renderCharts(h, days);
+    renderAlerts(h);
+  }
+
+  function renderTimeline(history) {
+    const tl = document.getElementById('risk-timeline');
+    tl.innerHTML = '';
+    const tip = document.getElementById('tooltip');
+
+    history.forEach(d => {
+      const tick = document.createElement('div');
+      tick.className = 'risk-tick';
+      tick.setAttribute('data-level', d.riskLevel);
+      tick.addEventListener('mousemove', (e) => {
+        tip.style.display = 'block';
+        tip.style.left = (e.clientX + 14) + 'px';
+        tip.style.top = (e.clientY - 10) + 'px';
+        document.getElementById('tip-day').textContent = 'Day ' + d.day;
+        document.getElementById('tip-risk').textContent = d.riskLevel + ' (' + d.riskScore.toFixed(0) + ')';
+        document.getElementById('tip-cpi').textContent = d.cpi.toFixed(1);
+        document.getElementById('tip-inflation').textContent = (d.inflationRate >= 0 ? '+' : '') + d.inflationRate.toFixed(2) + '%';
+        document.getElementById('tip-players').textContent = d.playerCount.toLocaleString();
+      });
+      tick.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      tl.appendChild(tick);
+    });
+
+    const total = history.length;
+    document.getElementById('timeline-mid').textContent = 'Day ' + Math.floor(total / 2);
+    document.getElementById('timeline-end').textContent = 'Day ' + (total - 1);
+  }
+
+  function renderCharts(history, days) {
+    const thin = history.length > 120 ? history.filter((_, i) => i % 2 === 0) : history;
+    const thinDays = thin.map(x => 'D' + x.day);
+
+    mkChart('chart-cpi', 'line', thinDays, [{
+      data: thin.map(x => x.cpi),
+      borderColor: '#e8ff47',
+      backgroundColor: 'rgba(232,255,71,0.06)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHitRadius: 10,
+    }]);
+
+    mkChart('chart-supply', 'line', thinDays, [{
+      data: thin.map(x => x.moneySupply),
+      borderColor: '#4dffb4',
+      backgroundColor: 'rgba(77,255,180,0.06)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHitRadius: 10,
+    }]);
+
+    mkChart('chart-flows', 'line', thinDays, [
+      {
+        label: 'Inflow',
+        data: thin.map(x => x.inflow),
+        borderColor: '#4dffb4',
+        borderWidth: 1.5,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHitRadius: 10,
+      },
+      {
+        label: 'Outflow',
+        data: thin.map(x => x.outflow),
+        borderColor: '#ff4d6d',
+        borderWidth: 1.5,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHitRadius: 10,
+      }
+    ], true);
+
+    mkChart('chart-players', 'line', thinDays, [{
+      data: thin.map(x => x.playerCount),
+      borderColor: '#b08dff',
+      backgroundColor: 'rgba(176,141,255,0.06)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.3,
+      pointRadius: 0,
+      pointHitRadius: 10,
+    }]);
+
+    mkChart('chart-risk', 'line', days, [{
+      data: history.map(x => x.riskScore),
+      borderColor: '#ff9500',
+      backgroundColor: (ctx) => {
+        const gradient = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+        gradient.addColorStop(0, 'rgba(255,59,59,0.3)');
+        gradient.addColorStop(0.5, 'rgba(255,149,0,0.15)');
+        gradient.addColorStop(1, 'rgba(255,149,0,0.02)');
+        return gradient;
+      },
+      borderWidth: 2,
+      fill: true,
+      tension: 0.2,
+      pointRadius: 0,
+      pointHitRadius: 10,
+    }], false, { y: { min: 0, max: 100 } });
+  }
+
+  function mkChart(id, type, labels, datasets, showLegend = false, extraScales = {}) {
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id).getContext('2d');
+    const opts = JSON.parse(JSON.stringify(chartDefaults));
+    if (showLegend) {
+      opts.plugins.legend = {
+        display: true,
+        labels: { color: '#555c72', font: { family: 'Space Mono', size: 10 }, boxWidth: 12 }
+      };
+    }
+    Object.assign(opts.scales, extraScales);
+    charts[id] = new Chart(ctx, { type, data: { labels, datasets }, options: opts });
+  }
+
+  function renderAlerts(history) {
+    const list = document.getElementById('alerts-list');
+    list.innerHTML = '';
+    const events = [];
+
+    history.forEach((d, i) => {
+      if (d.riskLevel === 'CRITICAL') {
+        events.push({ day: d.day, level: 'CRITICAL', msg: 'Hyperinflation risk critical — score ' + d.riskScore.toFixed(0) + '/100. CPI at ' + d.cpi.toFixed(1) + '.' });
+      } else if (d.riskLevel === 'HIGH' && (i === 0 || history[i - 1].riskLevel !== 'HIGH')) {
+        events.push({ day: d.day, level: 'HIGH', msg: 'Economy entered HIGH risk zone. Sink/source ratio: ' + d.sinkRatio.toFixed(2) + '.' });
+      }
+      if (d.inflationRate > 5 && (i === 0 || history[i - 1].inflationRate <= 5)) {
+        events.push({ day: d.day, level: 'HIGH', msg: 'Daily inflation spiked above 5% for the first time.' });
+      }
+      if (d.playerCount < history[0].playerCount * 0.5 && i > 10) {
+        if (i === 0 || history[i - 1].playerCount >= history[0].playerCount * 0.5) {
+          events.push({ day: d.day, level: 'MODERATE', msg: 'Player count dropped below 50% of launch. Economy velocity impacted.' });
+        }
+      }
+    });
+
+    if (events.length === 0) {
+      const el = document.createElement('div');
+      el.className = 'alert-item';
+      el.innerHTML = '<span class="alert-msg" style="color:var(--muted)">No critical events detected during simulation.</span>';
+      list.appendChild(el);
+      return;
+    }
+
+    events.slice(0, 30).forEach(ev => {
+      const el = document.createElement('div');
+      el.className = 'alert-item ' + ev.level;
+      el.innerHTML = '<span class="alert-day">Day ' + ev.day + '</span><span class="alert-msg">' + ev.msg + '</span>';
+      list.appendChild(el);
+    });
+  }
+
+  function fmtGold(n) {
+    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return n.toString();
+  }
+
+  function doExportCsv() {
+    if (!simResult) return;
+    const csv = EconomyEngine.exportCsv(simResult.history);
+    download('econsim_export.csv', csv, 'text/csv');
+  }
+
+  function doExportJson() {
+    if (!simResult) return;
+    const json = EconomyEngine.exportJson(simResult);
+    download('econsim_export.json', json, 'application/json');
+  }
+
+  function download(filename, content, mime) {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>
