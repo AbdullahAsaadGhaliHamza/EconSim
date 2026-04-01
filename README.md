@@ -1,27 +1,29 @@
-# EconSim — Game Economy Inflation Simulator
+# EconSim
 
-A browser-based tool for modeling MMO/open-world game economies. Tracks money supply, gold sources and sinks, player count decay, and gives you a live hyperinflation risk score across a configurable simulation window.
+Game Economy Inflation Simulator
 
-No backend needed. Drop the two files in a folder and open `index.html`.
+A lightweight browser tool for simulating MMO and open world game economies. It models money supply, gold sources and sinks, player lifecycle, and calculates a live hyperinflation risk score.
+
+No backend required. Open `index.html` and run it locally.
 
 ---
 
-## Why this exists
+## Why
 
-Most indie game devs don't think about inflation until players are complaining that gear costs 10x what it did at launch. By then it's usually too late to fix without a painful economic reset.
+Most game economies break slowly and silently. Prices creep up, gold accumulates, and eventually everything becomes inflated beyond repair.
 
-EconSim lets you stress-test your economy design *before* you ship — tweak gold sources, kill sinks, spike player count, and watch exactly when your economy tips into hyperinflation territory.
+EconSim helps you catch that early. You can simulate different scenarios and see exactly when your economy becomes unstable.
 
 ---
 
 ## Features
 
-- **Live simulation charts** — CPI over time, money supply growth, inflow vs outflow comparison, player count arc, and a full risk score timeline
-- **Hyperinflation risk scoring** — composite 0-100 score based on inflation rate, gold-per-player ratio, and sink/source balance
-- **Configurable economy** — toggle individual sources (quests, mobs, dungeon bosses) and sinks (repair costs, auction fees, mount training) on and off
-- **Player lifecycle modeling** — simulates the classic MMO launch curve: early spike, stabilization, and long-term churn
-- **Event log** — flags notable days where economy crossed risk thresholds
-- **Export** — download full simulation history as CSV or JSON for further analysis
+- Real time charts for CPI, money supply, inflow vs outflow, player count, and risk score  
+- Hyperinflation risk scoring from 0 to 100  
+- Toggleable gold sources and sinks  
+- Player lifecycle simulation with growth, decay, and long term retention  
+- Event log for risk spikes  
+- Export results as CSV or JSON  
 
 ---
 
@@ -29,42 +31,47 @@ EconSim lets you stress-test your economy design *before* you ship — tweak gol
 
 ```
 econsim/
-├── index.html    the dashboard (all charts + config UI)
-└── engine.js     simulation engine (pure JS, no dependencies)
+├── index.html
+└── engine.js
 ```
 
-The engine has zero dependencies. The dashboard pulls Chart.js from cdnjs for rendering.
+- `index.html` contains the UI and charts  
+- `engine.js` contains the simulation logic  
+
+No dependencies in the engine. The UI uses Chart.js from CDN.
 
 ---
 
 ## Quick Start
 
-1. Clone or download this repo
-2. Open `index.html` in any modern browser
-3. Adjust the config panel on the left
-4. Hit **Run Simulation**
+1. Download or clone the repo  
+2. Open `index.html` in your browser  
+3. Adjust settings  
+4. Click Run Simulation  
 
-That's it. Works offline, no build step, no npm.
+Works offline. No build step required.
 
 ---
 
-## How the Simulation Works
+## Simulation Overview
 
 ### Money Supply
 
-Each day the engine calculates total gold entering and leaving the economy:
+Each day:
 
 ```
-inflow  = sum of enabled sources × f(playerCount)
-outflow = sum of enabled sinks   × f(playerCount)
+inflow  = sources × f(playerCount)
+outflow = sinks   × f(playerCount)
 moneySupply += inflow - outflow
 ```
 
-The per-player multiplier scales logarithmically so doubling players doesn't double gold linearly (which is closer to how real MMO economies behave — high player counts don't proportionally increase farming efficiency).
+Scaling is logarithmic so player growth does not linearly multiply gold generation.
 
-### CPI (Consumer Price Index)
+---
 
-Based on a simplified Quantity Theory of Money:
+### CPI
+
+Based on a simplified quantity theory model:
 
 ```
 MV = PQ
@@ -73,63 +80,60 @@ quantityFactor = (moneySupply × velocity) / nominalGDP
 CPI = baseCPI × quantityFactor ^ elasticity
 ```
 
-- `velocity` represents how fast gold changes hands (trading, AH, services)
-- `elasticity` controls how strongly price levels react to money supply changes
-- `nominalGDP` is a proxy for total economic output (playerCount × base output)
+- velocity controls how fast gold moves  
+- elasticity controls price sensitivity  
+- nominalGDP is based on player output  
 
-### Hyperinflation Risk Score
+---
 
-The risk score (0-100) is a composite of four signals:
+### Risk Score
 
-| Signal | Max contribution |
-|---|---|
-| Daily inflation rate | 20 pts |
-| Gold per player (wealth concentration) | 25 pts |
-| Sink/source ratio | 20 pts |
-| Time-weighted inflation persistence | 10 pts |
+Composite score from 0 to 100:
 
-**Risk levels:**
+- Inflation rate  
+- Gold per player  
+- Sink to source ratio  
+- Inflation persistence  
 
 | Score | Level |
-|---|---|
-| 0-14 | STABLE |
-| 15-34 | LOW |
-| 35-54 | MODERATE |
-| 55-74 | HIGH |
-| 75-100 | CRITICAL |
-
-### Player Count Model
-
-The engine uses a three-phase player model that mirrors typical MMO launch behavior:
-
-- **Days 0-30:** exponential growth with weekly engagement oscillation (weekend spikes)
-- **Days 30-90:** exponential decay from peak as hype fades
-- **Days 90+:** settled retention curve bottoming out at ~30% of launch count
+|------|------|
+| 0-14 | Stable |
+| 15-34 | Low |
+| 35-54 | Moderate |
+| 55-74 | High |
+| 75-100 | Critical |
 
 ---
 
-## Config Reference
+### Player Model
 
-| Parameter | What it does |
-|---|---|
-| Starting Player Count | Base population at day 0 |
-| Simulation Days | How many days to run (30-730) |
-| Player Growth Rate | Daily % chance a new player joins |
-| Player Churn Rate | Daily % chance a player leaves |
-| Money Velocity | How fast gold circulates (higher = more inflationary pressure) |
-| Price Elasticity | How strongly prices react to supply changes |
-
-**Sources** are gold-generating mechanics. Disabling one removes that inflow entirely.
-
-**Sinks** consume gold. Disabling sinks is the fastest way to trigger hyperinflation — try turning off Repair Costs and Auction Fees at the same time and watch what happens.
+- Days 0 to 30: growth phase with weekly spikes  
+- Days 30 to 90: decline from peak  
+- Day 90+: stabilized population  
 
 ---
 
-## Export Format
+## Config
+
+Key parameters:
+
+- Starting Player Count  
+- Simulation Days  
+- Growth Rate  
+- Churn Rate  
+- Money Velocity  
+- Price Elasticity  
+
+Sources generate gold.  
+Sinks remove gold.
+
+Disabling sinks will quickly push the system into high risk.
+
+---
+
+## Export
 
 ### CSV
-
-One row per simulated day with these columns:
 
 ```
 day, playerCount, inflow, outflow, netFlow, moneySupply, cpi, inflationRate, sinkRatio, riskScore, riskLevel
@@ -137,82 +141,54 @@ day, playerCount, inflow, outflow, netFlow, moneySupply, cpi, inflationRate, sin
 
 ### JSON
 
-Full simulation dump including config used, per-day history array, and a summary object:
-
-```json
-{
-  "config": { ... },
-  "history": [ { "day": 0, "cpi": 100.0, ... }, ... ],
-  "summary": {
-    "finalCpi": 142.3,
-    "cpiChange": 42.3,
-    "peakRiskScore": 68,
-    "peakRiskDay": 47,
-    "avgInflationRate": 0.21,
-    "daysAtHighRisk": 12,
-    "finalRiskLevel": "MODERATE"
-  }
-}
-```
+Includes config, full history, and summary stats.
 
 ---
 
-## Scenarios worth testing
+## Scenarios
 
-**Healthy economy**
-Default settings. Sink/source ratio stays close to 1.0, CPI drifts up slowly, risk stays LOW/MODERATE.
-
-**No sinks**
-Disable all sinks. Gold accumulates with no drain. Risk hits CRITICAL within ~30-50 days depending on player count.
-
-**High velocity + low elasticity**
-Velocity 4.0+, elasticity 0.2. Gold moves fast but prices don't respond as aggressively. Useful for modeling economies with strong price controls.
-
-**Small server**
-100-500 players, high churn (8%+). Economy collapses fast when player count drops because you lose both sides of the market simultaneously.
-
-**Late game inflation creep**
-Run 365+ days with default settings. Even a healthy sink/source ratio will show gradual inflation from player count decline (fewer sinks active per unit of supply).
+- Default setup: balanced economy  
+- No sinks: rapid inflation  
+- High velocity: fast circulation pressure  
+- Small server: unstable market  
+- Long term run: gradual inflation buildup  
 
 ---
 
-## Extending the engine
+## Extending
 
-`engine.js` exports a single `EconomyEngine` object with these methods:
+Core API:
 
 ```js
-EconomyEngine.createDefaultConfig()   // returns a fresh config object
-EconomyEngine.runSimulation(config)   // returns { config, history, summary }
-EconomyEngine.exportCsv(history)      // returns CSV string
-EconomyEngine.exportJson(result)      // returns JSON string
+EconomyEngine.createDefaultConfig()
+EconomyEngine.runSimulation(config)
+EconomyEngine.exportCsv(history)
+EconomyEngine.exportJson(result)
 ```
 
-To add a new source or sink, just add an entry to the `goldSources` or `goldSinks` object in `createDefaultConfig()`:
+To add a source or sink, update `createDefaultConfig()`:
 
 ```js
 goldSources: {
-  craftingOrders: { baseRate: 40, perPlayerMultiplier: 0.7, enabled: true },
-  ...
+  craftingOrders: { baseRate: 40, perPlayerMultiplier: 0.7, enabled: true }
 }
 ```
 
-The engine picks it up automatically with no other changes needed.
+No additional changes required.
 
 ---
 
 ## Limitations
 
-This is a planning tool, not a production analytics system. A few things it doesn't model:
+- No player segmentation  
+- No auction house dynamics  
+- No external monetization sinks  
+- No exploit or bot modeling  
 
-- Player segmentation (whales vs casuals have very different gold flows)
-- Auction house price discovery (AH prices feed back into inflation differently than vendor prices)
-- External gold sinks like cosmetic shops or season passes
-- Item duplication exploits or bot farming (which are effectively unbounded sources)
-
-For a real game you'd want to instrument actual transaction logs and feed those into a model like this rather than relying on the estimated base rates.
+This is a design tool, not a live analytics system.
 
 ---
 
 ## License
 
-MIT. Use it, fork it, ship it.
+MIT
