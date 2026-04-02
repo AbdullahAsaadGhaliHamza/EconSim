@@ -1,5 +1,7 @@
 # EconSim
 
+<img width="1920" height="1080" alt="EconSim" src="https://github.com/user-attachments/assets/554f43fb-10c3-448a-a930-92ba080fde19" />
+
 Game Economy Inflation Simulator
 
 A lightweight browser tool for simulating MMO and open world game economies. It models money supply, gold sources and sinks, player lifecycle, and calculates a live hyperinflation risk score.
